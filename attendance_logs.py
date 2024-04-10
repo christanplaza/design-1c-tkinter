@@ -19,6 +19,7 @@ load_dotenv()
 redis_host = os.getenv("REDIS_HOST")
 redis_port = os.getenv("REDIS_PORT")
 redis_password = os.getenv("REDIS_PASSWORD")
+admin_host = os.getenv("admin_host")
 
 admin_host = os.getenv("ADMIN_HOST")
 
@@ -44,19 +45,6 @@ class AttendanceApp:
 
         self.refresh_button = tk.Button(self.root, text='Finalize Attendance', command=self.finalize_attendance)
         self.refresh_button.pack(pady=10)
-
-        self.conn = mysql.connector.connect(
-            host=admin_host,
-            port='3306',
-            user='root',
-            password='',
-            database='design-1c-cms'
-        )
-
-        self.cursor = self.conn.cursor()
-
-        self.cursor.execute('''CREATE TABLE IF NOT EXISTS attendance_table (`id` INT NOT NULL AUTO_INCREMENT , `student_id` VARCHAR(16) NOT NULL , `student_name` VARCHAR(255) NOT NULL , `first_detected` DATETIME NOT NULL , `last_detected` DATETIME NOT NULL , PRIMARY KEY (`id`))''')
-        self.conn.commit()
 
         # Setup the automatic refresh
         self.setup_automatic_refresh()
@@ -90,9 +78,7 @@ class AttendanceApp:
         print("Finalizing attendance")
 
         # Send a GET request to the PHP script with the class_id
-        response = requests.get(f'http://{admin_host}/design-1c-cms/api/finalize_attendance.php', params={'class_id': self.class_session.class_id})
-        
-        # response = requests.get('http://localhost/design-1c-cms/api/finalize_attendance.php', params={'class_id': 3})
+        response = requests.get('http://localhost/design-1c-class_management/api/finalize_attendance.php', params={'class_id': self.class_session.class_id})
 
         if response.status_code == 200:
             attendance_data = response.json()
@@ -174,7 +160,7 @@ class InitialWindow:
         self.conn = mysql.connector.connect(
             host=admin_host,
             port='3306',
-            user='root',
+            user='DellG5SE',
             password='',
             database='design-1c-cms'
         )
@@ -187,21 +173,36 @@ class InitialWindow:
         self.display_ongoing_classes()
 
     def get_ongoing_classes(self):
-        current_time = datetime.now()
-        current_day_of_week = current_time.strftime('%A').lower()  # Convert to lowercase to match the database format
-        current_time_str = current_time.strftime('%H:%M:%S')
+         # Send a GET request to the PHP API endpoint
+        response = requests.get(f'http://{admin_host}/design-1c-class_management/api/get_current_class.php')
         
-        # Fetch ongoing classes from MySQL database based on current day and time
-        query = ("SELECT c.title, c.course, s.location, s.start_time, s.end_time, t.name AS teacher_name, c.id "
-                 "FROM classes c "
-                 "JOIN teachers t ON c.teacher_id = t.id "
-                 "JOIN schedules s ON c.id = s.class_id "
-                 "WHERE s.day_of_week = %s "
-                 "AND s.start_time <= %s "
-                 "AND s.end_time >= %s")
-        self.cursor.execute(query, (current_day_of_week, current_time_str, current_time_str))
-        ongoing_classes = self.cursor.fetchall()
-        return ongoing_classes
+        if response.status_code == 200:
+            # Parse the JSON response
+            ongoing_classes_data = response.json()
+            
+            # Format the ongoing classes data
+            ongoing_classes = []
+            for class_data in ongoing_classes_data:
+                title = class_data['title']
+                course = class_data['course']
+                location = class_data['location']
+                start_time = datetime.strptime(class_data['start_time'], '%H:%M:%S').time()
+                end_time = datetime.strptime(class_data['end_time'], '%H:%M:%S').time()
+                teacher_name = class_data['teacher_name']
+                class_id = class_data['id']
+                
+                # Calculate the duration as timedelta
+                duration = datetime.combine(datetime.min, end_time) - datetime.combine(datetime.min, start_time)
+                
+                # Create a tuple with the formatted data
+                class_tuple = (title, course, location, timedelta(0), duration, teacher_name, class_id)
+                ongoing_classes.append(class_tuple)
+            
+            return ongoing_classes
+        else:
+            # Handle the error case
+            print(f"Error: {response.status_code}")
+            return []
     
     def display_ongoing_classes(self):
         # Create a frame to contain the card grid layout
