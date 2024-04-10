@@ -67,7 +67,12 @@ class AttendanceApp:
             self.tree.delete(item)
 
         # Send a GET request to the PHP script with the class_id
-        response = requests.get('http://localhost/design-1c-class_management/api/attendance_handler.php', params={'class_id': self.class_session.class_id})
+        url = 'http://localhost/design-1c-class_management/api/attendance_handler.php'
+        params = {'class_id': self.class_session.class_id}
+
+        response = requests.get(url, params=params)
+
+        print("Request URL:", response.url)
 
         if response.status_code == 200:
             latest_log_entries = response.json()
@@ -83,9 +88,9 @@ class AttendanceApp:
         print("Finalizing attendance")
 
         # Send a GET request to the PHP script with the class_id
-        # response = requests.get('http://localhost/design-1c-class_management/api/finalize_attendance.php', params={'class_id': self.class_session.class_id})
+        response = requests.get('http://localhost/design-1c-class_management/api/finalize_attendance.php', params={'class_id': self.class_session.class_id})
         
-        response = requests.get('http://localhost/design-1c-class_management/api/finalize_attendance.php', params={'class_id': 1})
+        # response = requests.get('http://localhost/design-1c-class_management/api/finalize_attendance.php', params={'class_id': 3})
 
         if response.status_code == 200:
             attendance_data = response.json()
