@@ -21,7 +21,7 @@ redis_port = os.getenv("REDIS_PORT")
 redis_password = os.getenv("REDIS_PASSWORD")
 admin_host = os.getenv("admin_host")
 
-admin_host = os.getenv("ADMIN_HOST")
+admin_host = os.getenv("admin_host")
 
 redis_client = redis.StrictRedis(host=redis_host, port=redis_port, password=redis_password, decode_responses=True)
 
@@ -155,16 +155,6 @@ class InitialWindow:
         
         # Set the size of the window to fill the entire screen
         self.root.geometry(f"{screen_width}x{screen_height}+0+0")
-
-        # Connect to the MySQL database
-        self.conn = mysql.connector.connect(
-            host=admin_host,
-            port='3306',
-            user='DellG5SE',
-            password='',
-            database='design-1c-cms'
-        )
-        self.cursor = self.conn.cursor()
         
         # Fetch ongoing classes
         self.ongoing_classes = self.get_ongoing_classes()
