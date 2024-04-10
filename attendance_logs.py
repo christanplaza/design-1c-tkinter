@@ -20,6 +20,8 @@ redis_host = os.getenv("REDIS_HOST")
 redis_port = os.getenv("REDIS_PORT")
 redis_password = os.getenv("REDIS_PASSWORD")
 
+admin_host = os.getenv("ADMIN_HOST")
+
 redis_client = redis.StrictRedis(host=redis_host, port=redis_port, password=redis_password, decode_responses=True)
 
 current_class_session = None
@@ -44,11 +46,11 @@ class AttendanceApp:
         self.refresh_button.pack(pady=10)
 
         self.conn = mysql.connector.connect(
-            host='localhost',
+            host=admin_host,
             port='3306',
             user='root',
             password='',
-            database='design-1c-class_management'
+            database='design-1c-cms'
         )
 
         self.cursor = self.conn.cursor()
@@ -67,7 +69,7 @@ class AttendanceApp:
             self.tree.delete(item)
 
         # Send a GET request to the PHP script with the class_id
-        url = 'http://localhost/design-1c-class_management/api/attendance_handler.php'
+        url = f'http://{admin_host}/design-1c-cms/api/attendance_handler.php'
         params = {'class_id': self.class_session.class_id}
 
         response = requests.get(url, params=params)
@@ -88,9 +90,9 @@ class AttendanceApp:
         print("Finalizing attendance")
 
         # Send a GET request to the PHP script with the class_id
-        response = requests.get('http://localhost/design-1c-class_management/api/finalize_attendance.php', params={'class_id': self.class_session.class_id})
+        response = requests.get(f'http://{admin_host}/design-1c-cms/api/finalize_attendance.php', params={'class_id': self.class_session.class_id})
         
-        # response = requests.get('http://localhost/design-1c-class_management/api/finalize_attendance.php', params={'class_id': 3})
+        # response = requests.get('http://localhost/design-1c-cms/api/finalize_attendance.php', params={'class_id': 3})
 
         if response.status_code == 200:
             attendance_data = response.json()
@@ -170,11 +172,11 @@ class InitialWindow:
 
         # Connect to the MySQL database
         self.conn = mysql.connector.connect(
-            host='localhost',
+            host=admin_host,
             port='3306',
             user='root',
             password='',
-            database='design-1c-class_management'
+            database='design-1c-cms'
         )
         self.cursor = self.conn.cursor()
         
