@@ -9,6 +9,7 @@ import requests
 import csv
 import serial
 import time
+from mfrc522 import SimpleMFRC522
 
 
 # Load environment variables from .env file
@@ -20,8 +21,13 @@ redis_port = os.getenv("REDIS_PORT")
 redis_password = os.getenv("REDIS_PASSWORD")
 admin_host = os.getenv("admin_host")
 
+# Serial Details
+serial_port = "/dev/ttyS0"
+baud_rate = 9600
+static_uid = "839647306872"
 
 redis_client = redis.StrictRedis(host=redis_host, port=redis_port, password=redis_password, decode_responses=True)
+reader = SimpleMFRC522()
 
 current_class_session = None
 
@@ -83,7 +89,8 @@ class AttendanceApp:
         response = requests.get(url, params=params)
 
         if response.status_code == 200:
-            attendance_data = response.json()
+            response_data = response.json()
+            attendance_data = response_data['attendance_data']
 
             # Clear existing items in the treeview
             for item in self.tree.get_children():
@@ -93,52 +100,110 @@ class AttendanceApp:
             for student in attendance_data:
                 self.tree.insert('', 'end', values=(student['student_number'], student['first_name'], student['last_name'], student['status']))
 
+            #RFID CHECK
+            while True:
+                uid, text = reader.read()
+                rfid_read = str(uid)
+                if rfid_read == static_uid:
+                    # FOR PRINTING
+                    print_data = self.convert_to_state1_csv(attendance_data, response_data)
+                    # print(print_data)
+                    self.send_to_pic_state1(print_data)
+                    time.sleep(5)
 
-            #SEND SMS
-            # Convert the attendance data to CSV string
-            # csv_data = self.convert_to_state2_csv(attendance_data)
-            # Send the CSV data to PIC via UART
-            # self.send_to_pic_state2(csv_data)
+                    # for message
+                    message_data = self.convert_to_state2_csv(attendance_data, response_data)
+                    self.send_to_pic_state2(message_data)
+                    break
+                else:
+                    GPIO.cleanup()
+                    break
 
-            # FOR PRINTING
-            print_data = self.convert_to_state1_csv(attendance_data)
-            self.send_to_pic_state1(print_data)
-        else:
-            print("Failed to retrieve attendance data from the server")
+    # def convert_to_state2_csv(self, data):
+    #     csv_data = []
+    #     for student in data:
+    #         # full_name = f"{student['first_name']} {student['last_name']}"
+    #         # first_seen = student['first_seen']
+    #         phone_number = student['phone_number']
+    #         csv_data.append(f"{phone_number}")
+    #         # csv_data.append(f"{full_name}|{first_seen}|{phone_number}")  # Name|timestamp|phone_number
 
-    def convert_to_state2_csv(self, data):
+    #     # return ", ".join(csv_data)
+    #     return csv_data
+    def convert_to_state2_csv(self, data, response_data):
         csv_data = []
         for student in data:
             full_name = f"{student['first_name']} {student['last_name']}"
             first_seen = student['first_seen']
             phone_number = student['phone_number']
-            csv_data.append(f"{full_name}|{first_seen}|{phone_number}")  # Name|timestamp|phone_number
+            class_name = response_data['class_title']           
+            # csv_data.append(f"{full_name}|{first_seen}|{phone_number}")  # Name|timestamp|phone_number
+            if first_seen != '':
+                csv_data.append(f"{full_name}|{class_name}|{first_seen}|{phone_number}")  # Name|timestamp|phone_number
+
 
         # return ", ".join(csv_data)
         return csv_data
 
-    def convert_to_state1_csv(self, data):
+    def convert_to_state1_csv(self, data, response_data):
         csv_data = []
-        for student in data:
-            full_name = f"{student['first_name']} {student['last_name']}"
+        class_name = response_data['class_title']
+        class_schedule = response_data['class_schedule']
+        formatted_text = f"1|{class_name}\n|{class_schedule}\n|" #GET THE CLASS_NAME VALUE AND THE CLASS_SCHEDULE VALUE
+        for student in data:           
+            full_name = f"{student['last_name']}, {student['first_name']}"
             status = student['status'][0]  # Get the first letter of the status (P/L/A)
-            csv_data.append(f"{full_name} {status}") #Name P/L/A
+            csv_data.append(f"[{status}] {full_name}") #Name P/L/A
+            time.sleep(0.1)
 
-        return ", ".join(csv_data)
+       
+        formatted_text += "\n".join(csv_data)
+        # formatted_text += "/"
+        formatted_text += "\n/"
+
+        print(formatted_text)##
+        return formatted_text
+        
+# uncomment this
 
     def send_to_pic_state2(self, csv_data):
         # Configure the serial connection (replace 'COM3' with the appropriate port)
-        ser = serial.Serial('COM4', 9600)  # Adjust the baud rate if needed
+        ser = serial.Serial(serial_port, baud_rate)  # Adjust the baud rate if needed
+        # char_array = ["2|John Vincent Delos Santos|11:30|+639065731422/"]
         # print(csv_data.encode()) # State 1
         for data in csv_data:
-            ser.write(data.encode())
-            print('Sent')
-            time.sleep(5)
-            
-        # # Send the CSV data to PIC
+            formatted_text = "2|"
+            formatted_text += data
+            formatted_text += "/"
 
+            char_array = list(formatted_text)
+            for char in char_array:
+                ser.write(char.encode())
+                print('Sent:', char.encode())
+                time.sleep(0.1)
+            time.sleep(10)
+            
+
+        # # Send the CSV data to PIC
         # # Close the serial connection
-        # ser.close()
+        ser.close()
+    #************* uncomment this *************
+
+    # for testing
+    # def send_to_pic_state2(self, csv_data):
+    #     # Configure the serial connection (replace 'COM3' with the appropriate port)
+    #     ser = serial.Serial(serial_port, baud_rate)  # Adjust the baud rate if needed
+    #     char_array = ["2|John Vincent Delos Santos|11:30|09927126089/"]
+    #     # print(csv_data.encode()) # State 1
+    #     for data in char_array:
+    #         ser.write(data.encode())
+    #         print('Sent:', data.encode())
+    #         time.sleep(5)
+            
+    #     # # Send the CSV data to PIC
+    #     # # Close the serial connection
+    #     ser.close()
+    # ***** for testing ****
 
     
     def on_close(self):
@@ -146,18 +211,22 @@ class AttendanceApp:
         self.initial_window.show_initial_window()  # Show the InitialWindow again
 
     def send_to_pic_state1(self, csv_data):
-        # Configure the serial connection (replace 'COM3' with the appropriate port)
-        # ser = serial.Serial('COM4', 9600)  # Adjust the baud rate if needed
-        print(csv_data) # State 1
-        # for data in csv_data:
-        #     ser.write(data.encode())
-        #     print('Sent')
-        #     time.sleep(5)
-            
-        # # Send the CSV data to PIC
+        try:
+            # Configure the serial connection (replace 'COM3' with the appropriate port)
+            ser = serial.Serial(serial_port, baud_rate)  # Adjust the baud rate if needed
+            # print(csv_data) # State 1
+            for data in csv_data:
+                ser.write(data.encode())
+                time.sleep(0.05)
+                print('Sent' + data)
+        except Exeeption as e:
+            print("error: " + str(e))
 
-        # # Close the serial connection
-        # ser.close()
+        finally: 
+            # Send the CSV data to PIC
+
+            # Close the serial connection
+            ser.close()
 
     
     def setup_automatic_refresh(self):
@@ -246,6 +315,38 @@ class InitialWindow:
         card_container = ttk.Frame(canvas)
         canvas.create_window((0, 0), window=card_container, anchor="nw")
 
+        # Create a canvas to hold the card frame
+        canvas = tk.Canvas(card_frame)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Create a scrollbar for the canvas
+        scrollbar = ttk.Scrollbar(card_frame, orient=tk.VERTICAL, command=canvas.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Configure the canvas to work with the scrollbar
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+
+        # Create a frame inside the canvas to hold the cards
+        card_container = ttk.Frame(canvas)
+        canvas.create_window((0, 0), window=card_container, anchor="nw")
+
+        # Create a canvas to hold the card frame
+        canvas = tk.Canvas(card_frame)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Create a scrollbar for the canvas
+        scrollbar = ttk.Scrollbar(card_frame, orient=tk.VERTICAL, command=canvas.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Configure the canvas to work with the scrollbar
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+
+        # Create a frame inside the canvas to hold the cards
+        card_container = ttk.Frame(canvas)
+        canvas.create_window((0, 0), window=card_container, anchor="nw")
+
         # Sort the ongoing classes alphabetically by title
         sorted_classes = sorted(self.ongoing_classes, key=lambda x: x[0])
 
@@ -278,7 +379,6 @@ class InitialWindow:
         # Configure the card container to expand to fit the canvas
         card_container.update_idletasks()
         canvas.config(scrollregion=canvas.bbox("all"))
-        
 
     def start_class(self, class_title, class_id):
         global current_class_session

@@ -11,13 +11,13 @@ try:
   print("Waiting for incoming characters...")
 
   while True:
-    char_array = ["1|John Vincent Delos Santos - Present\n Neil Patrick Sedeno - Present/"]
+    char_array = ["2|Neil Patrick Sedeno|11:30|+639927126089/"]    
     for char in char_array:
       ser.write(char.encode())
       time.sleep(0.005)
       print("Sent: " + char)
     print("Characters sent successfully")
-    time.sleep(5)
+    time.sleep(100)
 
 except KeyboardInterrupt:
   # Handle keyboard interrupt (Ctrl+C)
