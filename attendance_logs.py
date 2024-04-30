@@ -20,7 +20,6 @@ redis_port = os.getenv("REDIS_PORT")
 redis_password = os.getenv("REDIS_PASSWORD")
 admin_host = os.getenv("admin_host")
 
-admin_host = os.getenv("admin_host")
 
 redis_client = redis.StrictRedis(host=redis_host, port=redis_port, password=redis_password, decode_responses=True)
 
@@ -78,10 +77,14 @@ class AttendanceApp:
         self.refresh_attendance()
 
         # Send a GET request to the PHP script with the class_id
+<<<<<<< Updated upstream
         url = f'http://{admin_host}/design-1c-cms/api/finalize_attendance.php'
         params = {'class_id': self.class_session.class_id}
 
         response = requests.get(url, params=params)
+=======
+        response = requests.get(f'http://{admin_host}/design-1c-cms/api/finalize_attendance.php', params={'class_id': self.class_session.class_id})
+>>>>>>> Stashed changes
 
         if response.status_code == 200:
             attendance_data = response.json()
@@ -94,11 +97,16 @@ class AttendanceApp:
             for student in attendance_data:
                 self.tree.insert('', 'end', values=(student['student_number'], student['first_name'], student['last_name'], student['status']))
 
-            # Convert the attendance data to CSV string
-            csv_data = self.convert_to_state2_csv(attendance_data)
 
+            #SEND SMS
+            # Convert the attendance data to CSV string
+            # csv_data = self.convert_to_state2_csv(attendance_data)
             # Send the CSV data to PIC via UART
-            self.send_to_pic_state2(csv_data)
+            # self.send_to_pic_state2(csv_data)
+
+            # FOR PRINTING
+            print_data = self.convert_to_state1_csv(attendance_data)
+            self.send_to_pic_state1(print_data)
         else:
             print("Failed to retrieve attendance data from the server")
 
@@ -113,7 +121,7 @@ class AttendanceApp:
         # return ", ".join(csv_data)
         return csv_data
 
-    def convert_to_csv(self, data):
+    def convert_to_state1_csv(self, data):
         csv_data = []
         for student in data:
             full_name = f"{student['first_name']} {student['last_name']}"
@@ -137,9 +145,25 @@ class AttendanceApp:
         # ser.close()
 
     
+<<<<<<< Updated upstream
     def on_close(self):
         self.root.destroy()  # Destroy the AttendanceApp window
         self.initial_window.show_initial_window()  # Show the InitialWindow again
+=======
+    def send_to_pic_state1(self, csv_data):
+        # Configure the serial connection (replace 'COM3' with the appropriate port)
+        # ser = serial.Serial('COM4', 9600)  # Adjust the baud rate if needed
+        print(csv_data) # State 1
+        # for data in csv_data:
+        #     ser.write(data.encode())
+        #     print('Sent')
+        #     time.sleep(5)
+            
+        # # Send the CSV data to PIC
+
+        # # Close the serial connection
+        # ser.close()
+>>>>>>> Stashed changes
 
     
     def setup_automatic_refresh(self):
@@ -176,9 +200,15 @@ class InitialWindow:
         self.display_ongoing_classes()
 
     def get_ongoing_classes(self):
+<<<<<<< Updated upstream
         # Send a GET request to the PHP API endpoint
         response = requests.get(f'http://{admin_host}/design-1c-class_management/api/get_current_class.php')
 
+=======
+         # Send a GET request to the PHP API endpoint
+        response = requests.get(f'http://{admin_host}/design-1c-cms/api/get_current_class.php')
+        
+>>>>>>> Stashed changes
         if response.status_code == 200:
             # Parse the JSON response
             ongoing_classes_data = response.json()
