@@ -77,14 +77,10 @@ class AttendanceApp:
         self.refresh_attendance()
 
         # Send a GET request to the PHP script with the class_id
-<<<<<<< Updated upstream
         url = f'http://{admin_host}/design-1c-cms/api/finalize_attendance.php'
         params = {'class_id': self.class_session.class_id}
 
         response = requests.get(url, params=params)
-=======
-        response = requests.get(f'http://{admin_host}/design-1c-cms/api/finalize_attendance.php', params={'class_id': self.class_session.class_id})
->>>>>>> Stashed changes
 
         if response.status_code == 200:
             attendance_data = response.json()
@@ -145,11 +141,10 @@ class AttendanceApp:
         # ser.close()
 
     
-<<<<<<< Updated upstream
     def on_close(self):
         self.root.destroy()  # Destroy the AttendanceApp window
         self.initial_window.show_initial_window()  # Show the InitialWindow again
-=======
+
     def send_to_pic_state1(self, csv_data):
         # Configure the serial connection (replace 'COM3' with the appropriate port)
         # ser = serial.Serial('COM4', 9600)  # Adjust the baud rate if needed
@@ -163,7 +158,6 @@ class AttendanceApp:
 
         # # Close the serial connection
         # ser.close()
->>>>>>> Stashed changes
 
     
     def setup_automatic_refresh(self):
@@ -200,15 +194,9 @@ class InitialWindow:
         self.display_ongoing_classes()
 
     def get_ongoing_classes(self):
-<<<<<<< Updated upstream
-        # Send a GET request to the PHP API endpoint
-        response = requests.get(f'http://{admin_host}/design-1c-class_management/api/get_current_class.php')
-
-=======
          # Send a GET request to the PHP API endpoint
         response = requests.get(f'http://{admin_host}/design-1c-cms/api/get_current_class.php')
         
->>>>>>> Stashed changes
         if response.status_code == 200:
             # Parse the JSON response
             ongoing_classes_data = response.json()
