@@ -33,13 +33,13 @@ class AttendanceApp:
         self.initial_window = initial_window
         self.root.title("Live Attendance Tracker")
 
-        self.tree = ttk.Treeview(self.root, columns=('Student Number', 'First Name', 'Last Name', 'First Seen', 'Last Seen'))
-        self.tree.heading('#0', text='ID')  # Provide a heading for the first column
-        self.tree.heading('#1', text='Student Number')
-        self.tree.heading('#2', text='First Name')
-        self.tree.heading('#3', text='Last Name')
-        self.tree.heading('#4', text='First Seen')
-        self.tree.heading('#5', text='Last Seen')
+        self.tree = ttk.Treeview(self.root, columns=('Student Number', 'First Name', 'Last Name'))
+        # self.tree.heading('#0', text='ID')  # Provide a heading for the first column
+        self.tree.heading('#0', text='Student Number')
+        self.tree.heading('#1', text='First Name')
+        self.tree.heading('#2', text='Last Name')
+        # self.tree.heading('#4', text='First Seen')
+        # self.tree.heading('#5', text='Last Seen')
         self.tree.pack(padx=10, pady=10)
 
         self.refresh_button = tk.Button(self.root, text='Finalize Attendance', command=self.finalize_attendance)
@@ -69,7 +69,7 @@ class AttendanceApp:
 
             # Display the latest log entries in the treeview
             for log_entry in latest_log_entries:
-                self.tree.insert('', 'end', values=(log_entry['student_number'], log_entry['first_name'], log_entry['last_name'], log_entry['first_seen'], log_entry['last_seen']))
+                self.tree.insert('', 'end', values=(log_entry['student_number'], log_entry['first_name'], log_entry['last_name']))
         else:
             print("Failed to retrieve attendance logs from the server")
 
@@ -152,6 +152,7 @@ class ClassSession:
         self.class_id = class_id
         self.start_time = datetime.now()
 
+# Class Selection
 class InitialWindow:
     def __init__(self, root):
         self.root = root
