@@ -315,38 +315,6 @@ class InitialWindow:
         card_container = ttk.Frame(canvas)
         canvas.create_window((0, 0), window=card_container, anchor="nw")
 
-        # Create a canvas to hold the card frame
-        canvas = tk.Canvas(card_frame)
-        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-        # Create a scrollbar for the canvas
-        scrollbar = ttk.Scrollbar(card_frame, orient=tk.VERTICAL, command=canvas.yview)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-        # Configure the canvas to work with the scrollbar
-        canvas.configure(yscrollcommand=scrollbar.set)
-        canvas.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-
-        # Create a frame inside the canvas to hold the cards
-        card_container = ttk.Frame(canvas)
-        canvas.create_window((0, 0), window=card_container, anchor="nw")
-
-        # Create a canvas to hold the card frame
-        canvas = tk.Canvas(card_frame)
-        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-        # Create a scrollbar for the canvas
-        scrollbar = ttk.Scrollbar(card_frame, orient=tk.VERTICAL, command=canvas.yview)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-        # Configure the canvas to work with the scrollbar
-        canvas.configure(yscrollcommand=scrollbar.set)
-        canvas.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-
-        # Create a frame inside the canvas to hold the cards
-        card_container = ttk.Frame(canvas)
-        canvas.create_window((0, 0), window=card_container, anchor="nw")
-
         # Sort the ongoing classes alphabetically by title
         sorted_classes = sorted(self.ongoing_classes, key=lambda x: x[0])
 
