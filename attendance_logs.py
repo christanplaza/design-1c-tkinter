@@ -24,7 +24,7 @@ admin_host = os.getenv("admin_host")
 # Serial Details
 serial_port = "/dev/ttyS0"
 baud_rate = 9600
-static_uid = "839647306872"
+static_uid = ["839647306872","700675919364"]
 
 redis_client = redis.StrictRedis(host=redis_host, port=redis_port, password=redis_password, decode_responses=True)
 reader = SimpleMFRC522()
@@ -104,7 +104,7 @@ class AttendanceApp:
             while True:
                 uid, text = reader.read()
                 rfid_read = str(uid)
-                if rfid_read == static_uid:
+                if rfid_read in static_uid:
                     # FOR PRINTING
                     print_data = self.convert_to_state1_csv(attendance_data, response_data)
                     # print(print_data)
