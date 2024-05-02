@@ -83,7 +83,7 @@ class AttendanceApp:
 
             # Display the latest log entries in the treeview
             for log_entry in latest_log_entries:
-                self.tree.insert('', 'end', values=(log_entry['student_number'], log_entry['first_name'], log_entry['last_name', '']))
+                self.tree.insert('', 'end', values=(log_entry['student_number'], log_entry['first_name'], log_entry['last_name'], ''))
         else:
             print("Failed to retrieve attendance logs from the server")
 
@@ -91,46 +91,49 @@ class AttendanceApp:
         print("Getting Final Attendance Summary")
         self.refresh_attendance()
 
-        self.cancel_button = tk.Button(self.root, text='Cancel Finalization', command=self.cancel_finalization)
-        self.cancel_button.pack(pady=10)
+        
+        confirmation = messagebox.askyesno("Confirmation", "Are you sure you want to finalize attendance?")
+        if confirmation:
+            self.cancel_button = tk.Button(self.root, text='Cancel Finalization', command=self.cancel_finalization)
+            self.cancel_button.pack(pady=10)
 
-        # Send a GET request to the PHP script with the class_id
-        url = f'http://{admin_host}/design-1c-cms/api/finalize_attendance.php'
-        params = {'class_id': self.class_session.class_id}
+            # Send a GET request to the PHP script with the class_id
+            url = f'http://{admin_host}/design-1c-cms/api/finalize_attendance.php'
+            params = {'class_id': self.class_session.class_id}
 
-        response = requests.get(url, params=params)
+            response = requests.get(url, params=params)
 
-        if response.status_code == 200:
-            response_data = response.json()
-            attendance_data = response_data['attendance_data']
+            if response.status_code == 200:
+                response_data = response.json()
+                attendance_data = response_data['attendance_data']
 
-            # Clear existing items in the treeview
-            for item in self.tree.get_children():
-                self.tree.delete(item)
+                # Clear existing items in the treeview
+                for item in self.tree.get_children():
+                    self.tree.delete(item)
 
-            # Display the attendance data in the treeview
-            for student in attendance_data:
-                print(student)
-                self.tree.insert('', 'end', values=(student['student_number'], student['first_name'], student['last_name'], student['status']))
+                # Display the attendance data in the treeview
+                for student in attendance_data:
+                    print(student)
+                    self.tree.insert('', 'end', values=(student['student_number'], student['first_name'], student['last_name'], student['status']))
 
-            #RFID CHECK
-            while True:
-                uid, text = reader.read()
-                rfid_read = str(uid)
-                if rfid_read in static_uid:
-                    # FOR PRINTING
-                    print_data = self.convert_to_state1_csv(attendance_data, response_data)
-                    # print(print_data)
-                    self.send_to_pic_state1(print_data)
-                    time.sleep(5)
+                #RFID CHECK
+                while True:
+                    uid, text = reader.read()
+                    rfid_read = str(uid)
+                    if rfid_read in static_uid:
+                        # FOR PRINTING
+                        print_data = self.convert_to_state1_csv(attendance_data, response_data)
+                        # print(print_data)
+                        self.send_to_pic_state1(print_data)
+                        time.sleep(5)
 
-                    # for message
-                    message_data = self.convert_to_state2_csv(attendance_data, response_data)
-                    self.send_to_pic_state2(message_data)
-                    break
-                else:
-                    GPIO.cleanup()
-                    break
+                        # for message
+                        message_data = self.convert_to_state2_csv(attendance_data, response_data)
+                        self.send_to_pic_state2(message_data)
+                        break
+                    else:
+                        GPIO.cleanup()
+                        break
 
     # def convert_to_state2_csv(self, data):
     #     csv_data = []
