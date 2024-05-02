@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox
 from datetime import datetime, timedelta
 import redis
 from dotenv import load_dotenv
@@ -9,7 +10,7 @@ import requests
 import csv
 import serial
 import time
-from mfrc522 import SimpleMFRC522
+# from mfrc522 import SimpleMFRC522
 
 
 # Load environment variables from .env file
@@ -38,17 +39,25 @@ class AttendanceApp:
         self.initial_window = initial_window
         self.root.title("Live Attendance Tracker")
 
-        self.tree = ttk.Treeview(self.root, columns=('Student Number', 'First Name', 'Last Name'))
-        # self.tree.heading('#0', text='ID')  # Provide a heading for the first column
-        self.tree.heading('#0', text='Student Number')
-        self.tree.heading('#1', text='First Name')
-        self.tree.heading('#2', text='Last Name')
-        # self.tree.heading('#4', text='First Seen')
-        # self.tree.heading('#5', text='Last Seen')
+        self.cancel_button = None
+
+        self.tree = ttk.Treeview(self.root, show="headings", columns=('Student Number', 'First Name', 'Last Name', 'Status'))
+        self.tree.heading('Student Number', text='Student Number')
+        self.tree.heading('First Name', text='First Name')
+        self.tree.heading('Last Name', text='Last Name')
+        self.tree.heading('Status', text='Status')
+        self.tree.column('Student Number', width=120)  # Set the width of the 'Student Number' column
+        self.tree.column('First Name', width=200)  # Set the width of the 'First Name' column
+        self.tree.column('Last Name', width=200)  # Set the width of the 'Last Name' column
+        self.tree.column('Status', width=100)  # Set the width of the 'status' column
         self.tree.pack(padx=10, pady=10)
+
+        self.back_button = tk.Button(self.root, text='Go back to Class Selection', command=self.go_back_to_class_selection)
+        self.back_button.pack(pady=10)
 
         self.refresh_button = tk.Button(self.root, text='Finalize Attendance', command=self.finalize_attendance)
         self.refresh_button.pack(pady=10)
+
 
         ## Close AttendanceApp and open InitialWindow Again
         self.root.protocol("WM_DELETE_WINDOW", self.on_close) 
@@ -57,7 +66,7 @@ class AttendanceApp:
         self.setup_automatic_refresh()
 
     def refresh_attendance(self):
-        print("refreshing")
+        print("Fetching Latest Attendance Data from PHP")
 
         # Clear existing items in the treeview
         for item in self.tree.get_children():
@@ -74,13 +83,16 @@ class AttendanceApp:
 
             # Display the latest log entries in the treeview
             for log_entry in latest_log_entries:
-                self.tree.insert('', 'end', values=(log_entry['student_number'], log_entry['first_name'], log_entry['last_name']))
+                self.tree.insert('', 'end', values=(log_entry['student_number'], log_entry['first_name'], log_entry['last_name', '']))
         else:
             print("Failed to retrieve attendance logs from the server")
 
     def finalize_attendance(self):
-        print("Finalizing attendance")
+        print("Getting Final Attendance Summary")
         self.refresh_attendance()
+
+        self.cancel_button = tk.Button(self.root, text='Cancel Finalization', command=self.cancel_finalization)
+        self.cancel_button.pack(pady=10)
 
         # Send a GET request to the PHP script with the class_id
         url = f'http://{admin_host}/design-1c-cms/api/finalize_attendance.php'
@@ -98,6 +110,7 @@ class AttendanceApp:
 
             # Display the attendance data in the treeview
             for student in attendance_data:
+                print(student)
                 self.tree.insert('', 'end', values=(student['student_number'], student['first_name'], student['last_name'], student['status']))
 
             #RFID CHECK
@@ -207,8 +220,10 @@ class AttendanceApp:
 
     
     def on_close(self):
-        self.root.destroy()  # Destroy the AttendanceApp window
-        self.initial_window.show_initial_window()  # Show the InitialWindow again
+        confirmation = messagebox.askyesno("Confirmation", "Are you sure you want to close the attendance window?")
+        if confirmation:
+            self.root.destroy()  # Destroy the AttendanceApp window
+            self.initial_window.show_initial_window()  # Show the InitialWindow again
 
     def send_to_pic_state1(self, csv_data):
         try:
@@ -219,7 +234,7 @@ class AttendanceApp:
                 ser.write(data.encode())
                 time.sleep(0.05)
                 print('Sent' + data)
-        except Exeeption as e:
+        except Exception as e:
             print("error: " + str(e))
 
         finally: 
@@ -233,6 +248,21 @@ class AttendanceApp:
         # Refresh every 60 seconds (60000 milliseconds)
         self.refresh_attendance()  # Perform initial refresh
         self.root.after(15000, self.setup_automatic_refresh)  # Change time to
+
+    def cancel_finalization(self):
+        # Destroy the "Cancel Finalization" button
+        self.cancel_button.destroy()
+        self.cancel_button = None
+
+        # Show the "Finalize Attendance" button again
+        self.refresh_button.pack(pady=10)
+
+        # Restart the automatic refresh process
+        self.setup_automatic_refresh()
+    
+    def go_back_to_class_selection(self):
+        self.root.destroy()  # Destroy the AttendanceApp window
+        self.initial_window.show_initial_window()  # Show the InitialWindow again
 
 class ClassSession:
     def __init__(self, class_id):
@@ -258,6 +288,8 @@ class InitialWindow:
         
         # Fetch ongoing classes
         self.ongoing_classes = self.get_ongoing_classes()
+
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         
         # Display ongoing classes
         self.display_ongoing_classes()
@@ -349,10 +381,24 @@ class InitialWindow:
         canvas.config(scrollregion=canvas.bbox("all"))
 
     def start_class(self, class_title, class_id):
-        global current_class_session
-        current_class_session = ClassSession(class_id)
-        # Implement the logic to start the class (e.g., open a new window, perform necessary actions, etc.)
-        print(f"Starting class: {class_title} with class id: {class_id}")
+        # Display a popup message to instruct the user to scan their RFID card
+        messagebox.showinfo("Scan RFID Card", "Please scan your RFID card to start the class.")
+
+        # Prompt the user to scan their RFID card
+        while True:
+            uid, text = reader.read()
+            rfid_read = str(uid)
+            if rfid_read in static_uid:
+                # RFID card is valid, proceed with starting the class
+                global current_class_session
+                current_class_session = ClassSession(class_id)
+                print(f"Starting class: {class_title} with class id: {class_id}")
+                self.open_attendance_app()
+                break
+            else:
+                # RFID card is invalid, display an error message
+                messagebox.showerror("Invalid RFID Card", "Please scan a valid RFID card to start the class.")
+                GPIO.cleanup()
 
         self.open_attendance_app()
 
@@ -385,12 +431,12 @@ class InitialWindow:
         self.root.deiconify()
         self.refresh_ongoing_classes()
 
+    def on_close(self):
+        confirmation = messagebox.askyesno("Confirmation", "Are you sure you want to close the class selection window?")
+        if confirmation:
+            self.root.quit()  # Quit the Tkinter application
 
 if __name__ == "__main__":
-    # root = tk.Tk()
-    # app = AttendanceApp(root)
-    # root.mainloop()
-    # Create and display the initial window
     root = tk.Tk()
     initial_window = InitialWindow(root)
     root.mainloop()
